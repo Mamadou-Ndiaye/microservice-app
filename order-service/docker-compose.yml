@@ -1,0 +1,28 @@
+version: '3.9'
+services:
+  order-service-data:    #  order_service_data  name service BD MYSQL
+    image: mysql:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: order_service_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+  order-service-app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+
+    depends_on:
+      - order-service-data
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://order-service-data:3306/order_service_db?useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+volumes:
+  db-data:
