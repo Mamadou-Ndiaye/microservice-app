@@ -2,13 +2,16 @@ package sn.ucad.orderservice.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import sn.ucad.orderservice.dto.InventoryResponse;
 import sn.ucad.orderservice.dto.OrderLineItemsDto;
 import sn.ucad.orderservice.dto.OrderRequest;
+import sn.ucad.orderservice.event.OrderPlaceEvent;
 import sn.ucad.orderservice.model.Order;
 import sn.ucad.orderservice.model.OrderLineItems;
 import sn.ucad.orderservice.repository.OrderLineItemsRepository;
@@ -30,9 +33,19 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
 
-    private final WebClient webClient;
+   // private final WebClient webClient;
+
+    private final WebClient.Builder webClientBuilder;
 
     private  final OrderLineItemsRepository orderLineItemsRepository;
+
+    private final KafkaTemplate<String,OrderPlaceEvent> kafkaTemplate;
+
+    @Value("${inventory.service.URL}")
+    private String inventoryURL;
+
+  /*  @Value("${topic.name}")
+    private String topic;*/
     @Override
     public Order save(OrderRequest orderRequest) {
         log.info("OrderServiceImpl:save  new order execution started ");
@@ -49,13 +62,21 @@ public class OrderServiceImpl implements OrderService {
       log.info(" ======  List skuCodes of Order to save ==== {} ", skuCodes);
 
         // Call Inventory Service, and place order if product is in stock
-        InventoryResponse[] inventoryResponseArray = webClient
+      /*  InventoryResponse[] inventoryResponseArray = webClient
                 .get()
                 .uri(uriBuilder->uriBuilder.queryParam("skuCode", skuCodes).build())
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
                 .bodyToMono(InventoryResponse[].class)
+                .block();*/
+
+        InventoryResponse[] inventoryResponseArray = webClientBuilder.build().get()
+                .uri(inventoryURL,
+                        uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
+                .retrieve()
+                .bodyToMono(InventoryResponse[].class)
                 .block();
+
 
         log.info(" ************* get  inventoryResponseArray  {}  *************", inventoryResponseArray);
 
@@ -72,6 +93,8 @@ public class OrderServiceImpl implements OrderService {
         if(allProductInStock){
             orderCreated = orderRepository.save(order);
             log.info(" ************* Order saved  {}  *************", orderCreated);
+            log.info("Sending Order Details with Order Id {} to Notification Service", order.getId());
+            kafkaTemplate.send("NotificationTopic",new OrderPlaceEvent(order.getOrderNumber()));
 
            /* Order finalOrderCreated = orderCreated;
             orderLineItems.forEach(orderLineItems1 -> {

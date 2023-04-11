@@ -36,4 +36,10 @@ public class WebClientConfig {
         HttpClient httpClient = HttpClient.create().secure(t -> t.sslContext(sslContext));
         return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).baseUrl(inventoryURL).build();
     }
+
+    @Bean
+    @LoadBalanced
+    public WebClient.Builder webClientBuilder() {
+        return WebClient.builder();
+    }
 }
