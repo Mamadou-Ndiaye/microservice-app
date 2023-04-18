@@ -1,6 +1,11 @@
 package sn.ucad.productservice.controller;
 
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -37,6 +42,14 @@ public class ProductController {
     }
 
 
+    @Operation(
+            summary = "Retrieve a Product by Id",
+            description = "Get a product object by specifying its id. The response is Product object with id, name, description and price.",
+            tags = { "products", "get" })
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", content = { @Content(schema = @Schema(implementation = ProductDTO.class), mediaType = "application/json") }),
+            @ApiResponse(responseCode = "404", content = { @Content(schema = @Schema()) }),
+            @ApiResponse(responseCode = "500", content = { @Content(schema = @Schema()) }) })
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     List<ProductDTO> findAll(){
